@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Academy Profile Frame</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#061b35;
+    color:white;
+    text-align:center;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+    padding:20px;
+}
+
+h2{
+    margin-bottom:5px;
+}
+
+p{
+    color:#cfd8e3;
+}
+
+.editor{
+    width:100%;
+    aspect-ratio:1/1;
+    position:relative;
+    overflow:hidden;
+    background:#ddd;
+    margin-top:20px;
+    touch-action:none;
+}
+
+#userPhoto{
+    position:absolute;
+    top:50%;
+    left:50%;
+
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+    transform:
+        translate(-50%, -50%)
+        translate(0px,0px)
+        scale(1)
+        rotate(0deg);
+
+    transform-origin:center;
+    user-select:none;
+    pointer-events:none;
+}
+
+#frame{
+    position:absolute;
+    top:0;
+    left:0;
+
+    width:100%;
+    height:100%;
+
+    object-fit:contain;
+
+    z-index:10;
+    pointer-events:none;
+}
+
+.controls{
+    background:white;
+    color:#111;
+    margin-top:15px;
+    padding:18px;
+    border-radius:15px;
+}
+
+.upload-btn{
+    display:block;
+    background:#08783e;
+    color:white;
+    padding:14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:bold;
+    margin-bottom:15px;
+}
+
+input[type="file"]{
+    display:none;
+}
+
+label.control-title{
+    display:block;
+    text-align:left;
+    margin-top:12px;
+    margin-bottom:5px;
+    font-weight:bold;
+}
+
+input[type="range"]{
+    width:100%;
+}
+
+.buttons{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+}
+
+button{
+    flex:1;
+    border:0;
+    padding:14px;
+    border-radius:10px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.reset{
+    background:#ddd;
+}
+
+.download{
+    background:#f5c400;
+    color:#071b36;
+}
+
+.tip{
+    font-size:13px;
+    color:#666;
+    margin-top:10px;
+}
+
+canvas{
+    display:none;
+}
+</style>
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h2>⚽ আমার একাডেমি, আমার গর্ব</h2>
+
+    <p>
+        আপনার ছবি আপলোড করুন এবং Academy Profile Frame তৈরি করুন
+    </p>
+
+
+    <div class="editor" id="editor">
+
+        <!-- USER PHOTO -->
+        <img id="userPhoto">
+
+        <!-- TRANSPARENT FRAME -->
+        <img id="frame" src="frame.png">
+
+    </div>
+
+
+    <div class="controls">
+
+        <label class="upload-btn">
+            📷 আপনার ছবি নির্বাচন করুন
+            <input type="file"
+                   id="upload"
+                   accept="image/*">
+        </label>
+
+
+        <label class="control-title">
+            🔍 Zoom
+        </label>
+
+        <input type="range"
+               id="zoom"
+               min="1"
+               max="3"
+               step="0.01"
+               value="1">
+
+
+        <label class="control-title">
+            🔄 Rotate
+        </label>
+
+        <input type="range"
+               id="rotate"
+               min="-180"
+               max="180"
+               value="0">
+
+
+        <div class="buttons">
+
+            <button class="reset"
+                    onclick="resetPhoto()">
+                Reset
+            </button>
+
+            <button class="download"
+                    onclick="downloadPhoto()">
+                ⬇ Download
+            </button>
+
+        </div>
+
+        <div class="tip">
+            ছবির উপর আঙুল দিয়ে টেনে Position ঠিক করুন।
+        </div>
+
+    </div>
+
+</div>
+
+
+<canvas id="canvas"
+        width="1200"
+        height="1200">
+</canvas>
+
+
+<script>
+
+const upload = document.getElementById("upload");
+const photo = document.getElementById("userPhoto");
+const editor = document.getElementById("editor");
+
+const zoomSlider = document.getElementById("zoom");
+const rotateSlider = document.getElementById("rotate");
+
+let scale = 1;
+let rotation = 0;
+
+let posX = 0;
+let posY = 0;
+
+let dragging = false;
+
+let startX = 0;
+let startY = 0;
+
+
+/* ==============================
+   UPLOAD PHOTO
+================================ */
+
+upload.addEventListener("change", function(e){
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(event){
+
+        photo.src = event.target.result;
+
+        resetPhoto();
+
+    };
+
+    reader.readAsDataURL(file);
+
+});
+
+
+/* ==============================
+   UPDATE IMAGE
+================================ */
+
+function updateTransform(){
+
+    photo.style.transform =
+        `translate(-50%, -50%)
+         translate(${posX}px, ${posY}px)
+         scale(${scale})
+         rotate(${rotation}deg)`;
+
+}
+
+
+/* ==============================
+   ZOOM
+================================ */
+
+zoomSlider.addEventListener("input", function(){
+
+    scale = parseFloat(this.value);
+
+    updateTransform();
+
+});
+
+
+/* ==============================
+   ROTATE
+================================ */
+
+rotateSlider.addEventListener("input", function(){
+
+    rotation = parseFloat(this.value);
+
+    updateTransform();
+
+});
+
+
+/* ==============================
+   DRAG - MOUSE
+================================ */
+
+editor.addEventListener("mousedown", function(e){
+
+    if(!photo.src) return;
+
+    dragging = true;
+
+    startX = e.clientX - posX;
+    startY = e.clientY - posY;
+
+});
+
+
+window.addEventListener("mousemove", function(e){
+
+    if(!dragging) return;
+
+    posX = e.clientX - startX;
+    posY = e.clientY - startY;
+
+    updateTransform();
+
+});
+
+
+window.addEventListener("mouseup", function(){
+
+    dragging = false;
+
+});
+
+
+/* ==============================
+   DRAG - MOBILE TOUCH
+================================ */
+
+editor.addEventListener("touchstart", function(e){
+
+    if(!photo.src) return;
+
+    const touch = e.touches[0];
+
+    dragging = true;
+
+    startX = touch.clientX - posX;
+    startY = touch.clientY - posY;
+
+});
+
+
+editor.addEventListener("touchmove", function(e){
+
+    if(!dragging) return;
+
+    e.preventDefault();
+
+    const touch = e.touches[0];
+
+    posX = touch.clientX - startX;
+    posY = touch.clientY - startY;
+
+    updateTransform();
+
+},{passive:false});
+
+
+editor.addEventListener("touchend", function(){
+
+    dragging = false;
+
+});
+
+
+/* ==============================
+   RESET
+================================ */
+
+function resetPhoto(){
+
+    scale = 1;
+    rotation = 0;
+
+    posX = 0;
+    posY = 0;
+
+    zoomSlider.value = 1;
+    rotateSlider.value = 0;
+
+    updateTransform();
+
+}
+
+
+/* ==============================
+   DOWNLOAD FINAL IMAGE
+================================ */
+
+function downloadPhoto(){
+
+    if(!photo.src){
+
+        alert("প্রথমে আপনার ছবি আপলোড করুন।");
+
+        return;
+
+    }
+
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const size = canvas.width;
+
+    ctx.clearRect(0,0,size,size);
+
+
+    /* USER PHOTO */
+
+    ctx.save();
+
+    ctx.translate(
+        size/2 + posX * (size/editor.clientWidth),
+        size/2 + posY * (size/editor.clientWidth)
+    );
+
+    ctx.rotate(rotation * Math.PI / 180);
+
+    ctx.scale(scale,scale);
+
+
+    const img = photo;
+
+    const imgRatio =
+        img.naturalWidth / img.naturalHeight;
+
+
+    let drawWidth;
+    let drawHeight;
+
+
+    if(imgRatio > 1){
+
+        drawHeight = size;
+
+        drawWidth =
+            size * imgRatio;
+
+    }else{
+
+        drawWidth = size;
+
+        drawHeight =
+            size / imgRatio;
+
+    }
+
+
+    ctx.drawImage(
+        img,
+        -drawWidth/2,
+        -drawHeight/2,
+        drawWidth,
+        drawHeight
+    );
+
+    ctx.restore();
+
+
+    /* FRAME ON TOP */
+
+    const frame =
+        document.getElementById("frame");
+
+
+    ctx.drawImage(
+        frame,
+        0,
+        0,
+        size,
+        size
+    );
+
+
+    /* DOWNLOAD */
+
+    const link =
+        document.createElement("a");
+
+    link.download =
+        "academy-profile-frame.png";
+
+    link.href =
+        canvas.toDataURL(
+            "image/png",
+            1
+        );
+
+    link.click();
+
+}
+
+</script>
+
+</body>
+</html>
